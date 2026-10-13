@@ -1,0 +1,9 @@
+{
+  "name": "CarePulse Hospital & Medical Center Management System",
+  "description": "An enterprise-grade, full-stack Hospital Information System (HIS) with Electronic Medical Records (EMR), Doctor Appointment Booking, Real-Time ICU/CCU Bed Occupancy Tracking, Automated POS Invoicing & Billing, and 24/7 AI Medical Triage Assistant (Bengali & English).",
+  "homepage": "https://kowshik-roy.github.io/Hospital_Management/",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

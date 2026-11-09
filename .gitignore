@@ -8,6 +8,15 @@ dist/
 build/
 out/
 
+# PHP / Laravel
+/vendor/
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+.phpunit.result.cache
+
 # Java Maven build outputs
 backend-java/target/
 *.class

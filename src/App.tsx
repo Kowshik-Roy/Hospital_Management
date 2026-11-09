@@ -6,9 +6,11 @@ import {
   Bed,
   Bell,
   Building2,
+  CalendarCheck,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Clock,
   Clock3,
   CreditCard,
   FileText,
@@ -20,12 +22,17 @@ import {
   MapPin,
   Menu,
   Phone,
+  PhoneCall,
   Search,
+  ShieldAlert,
   ShieldCheck,
+  Sparkles,
+  Star,
   Stethoscope,
   User,
   Users,
   Wallet,
+  X,
 } from 'lucide-react';
 import {
   BrowserRouter,
@@ -40,6 +47,10 @@ import { OperationsPortal, OperationsRole } from './components/OperationsPortal'
 import { PatientCarePortal } from './components/PatientCarePortal';
 import { DoctorClinicalPortal } from './components/DoctorClinicalPortal';
 import { AdminCommandPortal } from './components/AdminCommandPortal';
+import { AiChatbot } from './components/AiChatbot';
+import { AppointmentModal } from './components/AppointmentModal';
+import { SymptomCheckerModal } from './components/SymptomCheckerModal';
+import { DOCTORS_DATA, DEPARTMENTS_DATA, DEFAULT_HOSPITAL_SETTINGS } from './data/hospitalData';
 
 const NursePortal = lazy(() => import('./components/NursePortal').then(({ NursePortal: portal }) => ({ default: portal })));
 const ReceptionistPortal = lazy(() => import('./components/ReceptionistPortal').then(({ ReceptionistPortal: portal }) => ({ default: portal })));
@@ -434,195 +445,340 @@ const PublicHomePage = ({ user, onLogout, language, onToggleLanguage }: { user: 
   const navigate = useNavigate();
   const locale = translations[language];
 
+  // Interactive Modals State
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isSymptomModalOpen, setIsSymptomModalOpen] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | undefined>(undefined);
+  const [activeDoctorDept, setActiveDoctorDept] = useState<string>('all');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const heroStats = language === 'en'
     ? [
-        { label: 'Emergency Cases', value: '24/7' },
-        { label: 'Specialists', value: '40+' },
-        { label: 'Patient Satisfaction', value: '96%' },
+        { label: 'Emergency Response', value: '< 10 min' },
+        { label: 'Verified Specialists', value: '45+' },
+        { label: 'Patient Satisfaction', value: '98.5%' },
+        { label: 'ICU & CCU Beds', value: '32 Units' },
       ]
     : [
-        { label: 'জরুরি কেস', value: '২৪/৭' },
-        { label: 'বিশেষজ্ঞ', value: '৪০+' },
-        { label: 'রোগী সন্তুষ্টি', value: '৯৬%' },
+        { label: 'জরুরি রেসপন্স', value: '< ১০ মিনিট' },
+        { label: 'বিশেষজ্ঞ চিকিৎসক', value: '৪৫+' },
+        { label: 'রোগী সন্তুষ্টি', value: '৯৮.৫%' },
+        { label: 'আইসিইউ ও সিসিইউ বেড', value: '৩২টি ইউনিট' },
       ];
 
   const emergencyCards = language === 'en'
     ? [
-        { label: 'ICU Beds', value: '12 available', color: 'bg-emerald-500/15 text-emerald-200' },
-        { label: 'Ambulance', value: 'On standby', color: 'bg-cyan-500/15 text-cyan-200' },
-        { label: 'Emergency Hotline', value: '16263', color: 'bg-orange-500/15 text-orange-200' },
+        { label: 'ICU/CCU Beds', value: '14 Available', color: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-200' },
+        { label: 'Emergency Ambulance', value: '4 On Standby', color: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-200' },
+        { label: 'Emergency Hotline', value: '16263', color: 'bg-rose-500/15 border-rose-500/30 text-rose-200' },
+        { label: 'Blood Bank', value: 'All Groups Active', color: 'bg-amber-500/15 border-amber-500/30 text-amber-200' },
       ]
     : [
-        { label: 'আইসিইউ বেড', value: '১২টি আছে', color: 'bg-emerald-500/15 text-emerald-200' },
-        { label: 'অ্যাম্বুলেন্স', value: 'স্ট্যান্ডবাইতে', color: 'bg-cyan-500/15 text-cyan-200' },
-        { label: 'ইমার্জেন্সি হটলাইন', value: '১৬২৬৩', color: 'bg-orange-500/15 text-orange-200' },
+        { label: 'আইসিইউ/সিসিইউ বেড', value: '১৪টি খালি আছে', color: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-200' },
+        { label: 'জরুরি অ্যাম্বুলেন্স', value: '৪টি প্রস্তুত আছে', color: 'bg-cyan-500/15 border-cyan-500/30 text-cyan-200' },
+        { label: 'জরুরি হটলাইন', value: '১৬২৬৩', color: 'bg-rose-500/15 border-rose-500/30 text-rose-200' },
+        { label: 'ব্লাড ব্যাংক', value: 'সব গ্রুপ সচল', color: 'bg-amber-500/15 border-amber-500/30 text-amber-200' },
       ];
 
   const aboutCards = language === 'en'
     ? [
-        { icon: Hospital, title: 'Mission', text: 'To provide high-quality, accessible, and human-centered care that improves health outcomes.' },
-        { icon: Landmark, title: 'Vision', text: 'To become the leading digital hospital network recognized for excellence and innovation.' },
+        { icon: Hospital, title: 'Our Mission', text: 'To deliver compassionate, ethically grounded, and precision-driven healthcare using modern diagnostic systems and verified medical expertise.' },
+        { icon: Landmark, title: 'Our Vision', text: 'To build Bangladesh’s premier integrated digital healthcare hub, setting new standards for patient outcomes and rapid medical access.' },
       ]
     : [
-        { icon: Hospital, title: 'মিশন', text: 'উচ্চমানের, সহজলভ্য ও মানবকেন্দ্রিক সেবা প্রদান করে স্বাস্থ্য ফলাফল উন্নত করা।' },
-        { icon: Landmark, title: 'ভিশন', text: 'অভিজ্ঞতা ও উদ্ভাবনের মাধ্যমে দেশনেতৃস্থানীয় ডিজিটাল হাসপাতাল নেটওয়ার্কে পরিণত হওয়া।' },
+        { icon: Hospital, title: 'আমাদের মিশন', text: 'উন্নত রোগ নির্ণয় ব্যবস্থা ও বিশেষজ্ঞ চিকিৎসকদের সমন্বয়ে মানবিক, নৈতিক ও বিশ্বমানের স্বাস্থ্যসেবা নিশ্চিত করা।' },
+        { icon: Landmark, title: 'আমাদের ভিশন', text: 'বাংলাদেশের শীর্ষস্থানীয় একীভূত ডিজিটাল হাসপাতাল ও স্বাস্থ্যসেবা হাব হিসেবে নিজেকে প্রতিষ্ঠিত করা।' },
       ];
 
   const serviceCards = language === 'en'
     ? [
-        { title: 'Outpatient Care', text: 'Fast access to specialist consultations, follow-ups, and treatment planning.' },
-        { title: 'Diagnostics', text: 'Advanced lab services, imaging, and pathology with reliable turnaround times.' },
-        { title: 'Inpatient Services', text: 'Comfortable rooms, ICU support, and safe patient monitoring for recovery.' },
-        { title: 'Online Appointment', text: 'Book verified specialist visits and receive a digital token.' },
-        { title: 'Digital Prescription', text: 'Access your clinician-approved treatment plan from your portal.' },
-        { title: 'Ambulance & Emergency', text: 'Rapid emergency response and ambulance coordination, day and night.' },
+        { title: 'Outpatient Care (OPD)', text: 'Fast-track specialist consultations, digital queue tokens, and integrated follow-ups.' },
+        { title: 'Advanced Diagnostics', text: '24/7 fully automated pathology, 3T MRI, 128-Slice CT scan, and digital X-ray.' },
+        { title: 'Inpatient & Critical Care', text: 'Clean private cabins, specialized ICU/CCU support, and round-the-clock nursing care.' },
+        { title: 'Instant Online Booking', text: 'Real-time verified slot booking with automated SMS & digital printable token.' },
+        { title: 'Digital EMR & Prescriptions', text: 'Lifetime access to physician-signed digital prescriptions and lab reports.' },
+        { title: 'Ambulance & Trauma Fleet', text: 'GPS-tracked ICU ambulance fleet equipped with mobile ventilators and oxygen.' },
       ]
     : [
-        { title: 'আউটপেশেন্ট কেয়ার', text: 'দ্রুত বিশেষজ্ঞ পরামর্শ, ফলোআপ ও চিকিৎসা পরিকল্পনা।' },
-        { title: 'ডায়াগনস্টিকস', text: 'উন্নত ল্যাব, ইমেজিং ও প্যাথলজি সেবার নির্ভরযোগ্য টার্নারাউন্ড সময়।' },
-        { title: 'ইনপেশেন্ট সেবা', text: 'আরামদায়ক রুম, আইসিইউ সাপোর্ট ও নিরাপদ রিকভারি মনিটরিং।' },
-        { title: 'অনলাইন অ্যাপয়েন্টমেন্ট', text: 'বিশেষজ্ঞ চিকিৎসকের সময় বুক করুন এবং ডিজিটাল টোকেন পান।' },
-        { title: 'ডিজিটাল প্রেসক্রিপশন', text: 'পোর্টাল থেকে চিকিৎসকের অনুমোদিত চিকিৎসা পরিকল্পনা দেখুন।' },
-        { title: 'অ্যাম্বুলেন্স ও জরুরি সেবা', text: 'দিনরাত দ্রুত জরুরি সেবা ও অ্যাম্বুলেন্স সমন্বয়।' },
+        { title: 'আউটপেশেন্ট কেয়ার (OPD)', text: 'দ্রুত বিশেষজ্ঞ চিকিৎসকের পরামর্শ, ডিজিটাল কিউ টোকেন এবং ফলোআপ সেবা।' },
+        { title: 'উন্নত ডায়াগনস্টিকস', text: '২৪/৭ অটোমেটেড প্যাথলজি, ৩টি এমআরআই, ১২৮-স্লাইস সিটি স্ক্যান ও ডিজিটাল এক্স-রে।' },
+        { title: 'ইনপেশেন্ট ও ক্রিটিক্যাল কেয়ার', text: 'অভিজাত প্রাইভেট কেবিন, সার্বক্ষণিক আইসিইউ/সিসিইউ ও সার্বক্ষণিক নার্সিং কেয়ার।' },
+        { title: 'অনলাইন অ্যাপয়েন্টমেন্ট', text: 'মুহূর্তেই সময় বুক করুন এবং ডিজিটাল প্রিন্টযোগ্য টোকেন ও এসএমএস নিশ্চিতকরণ পান।' },
+        { title: 'ডিজিটাল প্রেসক্রিপশন ও EMR', text: 'অনলাইন পোর্টাল থেকে যেকোনো সময় আপনার সকল প্রেসক্রিপশন ও রিপোর্ট দেখুন।' },
+        { title: 'অ্যাম্বুলেন্স ও ট্রমা সেবা', text: 'জিপিএস ট্র্যাকিং, ভেন্টিলেটর ও অক্সিজেন সুবিধাসহ সার্বক্ষণিক অ্যাম্বুলেন্স বহর।' },
       ];
 
-  const facilityItems = language === 'en'
-    ? [
-        'Advanced ICU and CCU capabilities',
-        'Digital medical records and appointment tracking',
-        'Modern pharmacy and pathology support',
-        'Round-the-clock emergency and ambulance services',
-      ]
-    : [
-        'উন্নত আইসিইউ ও সিসিইউ সুবিধা',
-        'ডিজিটাল মেডিকেল রেকর্ড ও অ্যাপয়েন্টমেন্ট ট্র্যাকিং',
-        'আধুনিক ফার্মেসি ও প্যাথলজি সাপোর্ট',
-        '২৪/৭ ইমার্জেন্সি ও অ্যাম্বুলেন্স সেবা',
-      ];
-
-  const facilityStats = language === 'en'
-    ? [
-        { label: 'ICU Beds', value: '18', icon: Bed },
-        { label: 'Outpatient Visits', value: '8k+', icon: Users },
-        { label: 'Lab Tests', value: '32k+', icon: FileText },
-        { label: 'Emergency Response', value: '24/7', icon: Clock3 },
-      ]
-    : [
-        { label: 'আইসিইউ বেড', value: '১৮', icon: Bed },
-        { label: 'আউটপেশেন্ট ভিজিট', value: '৮k+', icon: Users },
-        { label: 'ল্যাব টেস্ট', value: '৩২k+', icon: FileText },
-        { label: 'ইমার্জেন্সি রেসপন্স', value: '২৪/৭', icon: Clock3 },
-      ];
+  const filteredDoctors = activeDoctorDept === 'all'
+    ? DOCTORS_DATA
+    : DOCTORS_DATA.filter(doc => doc.departmentId === activeDoctorDept);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-600 text-white shadow-lg shadow-cyan-500/20">
-              <HeartPulse className="h-6 w-6" />
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* 1. TOP 24/7 EMERGENCY & AI TICKER BAR */}
+      <div className="bg-slate-950 text-slate-200 text-xs px-4 py-2 border-b border-slate-800 shadow-inner">
+        <div className="mx-auto flex max-w-7xl items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-4 text-[11px]">
+            <span className="flex items-center gap-1.5 font-bold text-rose-400">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span>{language === 'bn' ? 'জরুরি হটলাইন:' : '24/7 Hotline:'}</span>
+              <a href="tel:16263" className="text-white hover:underline font-mono font-extrabold text-xs">16263</a>
+            </span>
+            <span className="hidden sm:flex items-center gap-1.5 text-slate-400">
+              <span>{language === 'bn' ? 'আইসিইউ বেড:' : 'ICU Beds:'}</span>
+              <span className="text-emerald-400 font-semibold">{language === 'bn' ? '১৪টি খালি' : '14 Available'}</span>
+            </span>
+            <span className="hidden md:flex items-center gap-1.5 text-slate-400">
+              <span>{language === 'bn' ? 'জরুরি অ্যাম্বুলেন্স:' : 'Ambulance:'}</span>
+              <span className="text-cyan-300 font-mono font-semibold">+880 1711-999888</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsSymptomModalOpen(true)}
+              className="flex items-center gap-1.5 text-[11px] text-cyan-300 hover:text-white font-semibold px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800/80 hover:border-cyan-500 transition cursor-pointer"
+            >
+              <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
+              <span>{language === 'bn' ? 'AI লক্ষণ পরীক্ষা' : 'AI Symptom Triage'}</span>
+            </button>
+            <div className="h-3 w-px bg-slate-800 hidden sm:block" />
+            <button
+              onClick={() => onToggleLanguage(language === 'en' ? 'bn' : 'en')}
+              className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-800 hover:bg-slate-700 text-teal-300 transition"
+            >
+              {language === 'en' ? 'বাংলা' : 'ENGLISH'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. STICKY GLASSMORPHIC HEADER */}
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl shadow-xs transition-all">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-600/25 group-hover:scale-105 transition-transform">
+              <HeartPulse className="h-6 w-6 stroke-[2.2]" />
             </div>
             <div>
-              <p className="text-lg font-black tracking-tight text-slate-900">CarePulse</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-700">Hospital & Wellness</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-lg font-black tracking-tight text-slate-900">CarePulse</p>
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase bg-teal-100 text-teal-800">Hospital</span>
+              </div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-700">Healthcare Information System</p>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-semibold text-slate-700 md:flex">
+          {/* Desktop Nav */}
+          <nav className="hidden items-center gap-7 text-xs font-bold text-slate-600 lg:flex">
             {(translations[language].nav).map((item) => (
-              <a key={item.label} href={item.href} className="transition hover:text-teal-700">{item.label}</a>
+              <a
+                key={item.label}
+                href={item.href}
+                className="transition-colors hover:text-teal-700 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-teal-600 after:transition-all"
+              >
+                {item.label}
+              </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* Direct Booking Modal Button */}
             <button
-              onClick={() => onToggleLanguage(language === 'en' ? 'bn' : 'en')}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300"
+              onClick={() => {
+                setSelectedDoctorId(undefined);
+                setIsBookingModalOpen(true);
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-teal-600/20 hover:shadow-lg hover:shadow-teal-600/30 hover:scale-[1.02] transition cursor-pointer"
             >
-              {language === 'en' ? 'BN' : 'EN'}
+              <CalendarCheck className="w-3.5 h-3.5" />
+              <span>{locale.public.primaryButton}</span>
             </button>
+
             {user ? (
-              <>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => navigate(`/${user.role}/dashboard`)}
-                  className="hidden rounded-full border border-teal-600 px-4 py-2 text-sm font-bold text-teal-700 transition hover:bg-teal-50 sm:inline-flex"
+                  className="rounded-full border border-teal-600 bg-teal-50 px-4 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100 transition cursor-pointer"
                 >
                   {locale.public.openPortal}
                 </button>
                 <button
                   onClick={onLogout}
-                  className="rounded-full border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="rounded-full border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
                 >
                   {locale.public.logout}
                 </button>
-              </>
+              </div>
             ) : (
-              <Link to="/login" className="inline-flex items-center rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-600/20 transition hover:shadow-xl">
-                {locale.public.login}
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 shadow-2xs hover:border-teal-500 hover:text-teal-700 transition"
+              >
+                <User className="w-3.5 h-3.5 text-teal-600" />
+                <span>{locale.public.login}</span>
               </Link>
             )}
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-slate-200 bg-white/95 backdrop-blur-xl px-4 py-3 space-y-2">
+            {(translations[language].nav).map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 text-sm font-semibold text-slate-700 hover:text-teal-700"
+              >
+                {item.label}
+              </a>
+            ))}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setSelectedDoctorId(undefined);
+                  setIsBookingModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-600 py-2.5 text-sm font-bold text-white shadow-sm"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                <span>{locale.public.primaryButton}</span>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       <main id="top">
-        <section className="relative overflow-hidden bg-gradient-to-br from-sky-50 via-white to-emerald-50">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),transparent_30%)]" />
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-24">
-            <div className="flex flex-col justify-center">
-              <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-700 shadow-sm">
-                <BadgeCheck className="h-4 w-4" />
-                {locale.public.badge}
+        {/* 3. HERO SECTION WITH MESH GRADIENT & LIVE STATUS */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-teal-50/70 via-white to-sky-50/60 py-12 lg:py-20">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(13,148,136,0.15),transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(6,182,212,0.12),transparent_35%)]" />
+
+          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 items-center">
+            {/* Left Content */}
+            <div>
+              {/* Trust Pill */}
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-teal-200/90 bg-white/90 backdrop-blur-md px-3.5 py-1.5 text-xs font-bold text-teal-800 shadow-sm">
+                <BadgeCheck className="h-4 w-4 text-teal-600" />
+                <span>{locale.public.badge}</span>
               </div>
 
-              <h1 className="max-w-xl text-4xl font-black tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.12]">
                 {locale.public.headline}
               </h1>
 
-              <p className="mt-6 max-w-xl text-lg text-slate-600">
+              <p className="mt-5 text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed">
                 {locale.public.subheadline}
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link to="/login" className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-teal-600/30 transition hover:translate-y-[-1px]">
-                  {locale.public.primaryButton} <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a href="#doctors" className="inline-flex items-center rounded-full border border-slate-200 bg-white px-6 py-3.5 text-base font-bold text-slate-800 transition hover:border-slate-300 hover:bg-slate-50">
+              {/* Quick Action CTAs */}
+              <div className="mt-8 flex flex-wrap gap-3.5 items-center">
+                <button
+                  onClick={() => {
+                    setSelectedDoctorId(undefined);
+                    setIsBookingModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-teal-600 via-teal-700 to-cyan-600 px-6 py-3.5 text-sm sm:text-base font-bold text-white shadow-xl shadow-teal-700/25 hover:shadow-2xl hover:shadow-teal-700/35 hover:-translate-y-0.5 transition cursor-pointer"
+                >
+                  <CalendarCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>{locale.public.primaryButton}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={() => setIsSymptomModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-teal-300/80 bg-white/90 backdrop-blur-md px-5 py-3.5 text-sm sm:text-base font-bold text-teal-800 shadow-xs hover:border-teal-500 hover:bg-teal-50/50 transition cursor-pointer"
+                >
+                  <Sparkles className="h-4 w-4 text-teal-600 animate-pulse" />
+                  <span>{language === 'en' ? 'AI Symptom Checker' : 'AI লক্ষণ মূল্যায়ন'}</span>
+                </button>
+
+                <a
+                  href="#doctors"
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-white px-5 py-3.5 text-sm sm:text-base font-bold text-slate-700 shadow-2xs hover:border-slate-300 hover:bg-slate-50 transition"
+                >
                   {language === 'en' ? 'Find Doctor' : 'ডাক্তার খুঁজুন'}
                 </a>
-                <a href="tel:16263" className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-6 py-3.5 text-base font-bold text-rose-800 transition hover:border-rose-300 hover:bg-rose-100">
-                  {language === 'en' ? 'Emergency Contact' : 'জরুরি যোগাযোগ'}
+
+                <a
+                  href="tel:16263"
+                  className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50/80 px-5 py-3.5 text-sm sm:text-base font-bold text-rose-800 hover:bg-rose-100 transition"
+                >
+                  <PhoneCall className="h-4 w-4 text-rose-600" />
+                  <span>16263</span>
                 </a>
               </div>
 
-              <div className="mt-10 grid max-w-xl grid-cols-3 gap-4">
+              {/* Stats Bar */}
+              <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-xl">
                 {heroStats.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
-                    <p className="text-2xl font-black text-slate-900">{stat.value}</p>
-                    <p className="mt-1 text-xs font-medium text-slate-600">{stat.label}</p>
+                  <div key={stat.label} className="rounded-2xl border border-slate-200/90 bg-white/80 p-3.5 shadow-xs backdrop-blur-sm">
+                    <p className="text-xl sm:text-2xl font-black text-slate-900">{stat.value}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-600">{stat.label}</p>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Right Card: Live Emergency Command Center */}
             <div id="emergency" className="relative scroll-mt-24">
-              <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_30px_80px_rgba(15,23,42,0.08)]">
-                <div className="rounded-[24px] bg-gradient-to-br from-slate-900 via-sky-900 to-teal-700 p-6 text-white">
-                  <div className="flex items-center justify-between">
+              <div className="rounded-[32px] border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/10">
+                <div className="rounded-[26px] bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 p-6 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                  <div className="flex items-center justify-between pb-5 border-b border-white/10">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-cyan-200">{language === 'en' ? '24/7 Medical Care' : '২৪/৭ মেডিকেল কেয়ার'}</p>
-                      <h2 className="mt-2 text-3xl font-black">{language === 'en' ? 'Emergency Response' : 'ইমার্জেন্সি রেসপন্স'}</h2>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-300">
+                        {language === 'en' ? '24/7 Command Center' : '২৪/৭ কমান্ড সেন্টার'}
+                      </span>
+                      <h2 className="mt-1 text-2xl font-black">
+                        {language === 'en' ? 'Live Hospital Status' : 'হাসপাতাল লাইভ স্ট্যাটাস'}
+                      </h2>
                     </div>
-                    <div className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-200">{language === 'en' ? 'Live' : 'লাইভ'}</div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span>{language === 'en' ? 'Active' : 'সচল'}</span>
+                    </div>
                   </div>
 
-                  <div className="mt-8 space-y-4">
+                  {/* Status Metrics */}
+                  <div className="mt-5 space-y-3">
                     {emergencyCards.map((item) => (
-                      <div key={item.label} className={`flex items-center justify-between rounded-2xl px-4 py-3 ${item.color}`}>
-                        <span className="text-sm font-semibold">{item.label}</span>
-                        <span className="font-black">{item.value}</span>
+                      <div
+                        key={item.label}
+                        className={`flex items-center justify-between rounded-xl px-4 py-3 border backdrop-blur-md ${item.color}`}
+                      >
+                        <span className="text-xs font-semibold">{item.label}</span>
+                        <span className="font-extrabold text-sm">{item.value}</span>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Quick Hotline Call Card */}
+                  <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] text-slate-300 font-medium">
+                        {language === 'en' ? 'Emergency Dispatch Ambulance' : 'জরুরি অ্যাম্বুলেন্স প্রেরণ'}
+                      </p>
+                      <p className="text-base font-extrabold text-white font-mono">16263 / 999</p>
+                    </div>
+                    <a
+                      href="tel:16263"
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5" />
+                      <span>{language === 'en' ? 'Call Now' : 'কল করুন'}</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -630,178 +786,272 @@ const PublicHomePage = ({ user, onLogout, language, onToggleLanguage }: { user: 
           </div>
         </section>
 
+        {/* 4. ABOUT SECTION */}
         <section id="about" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-2">
+          <div className="grid gap-10 lg:grid-cols-2 items-center">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">{language === 'en' ? 'About CarePulse' : 'কেয়ারপালস সম্পর্কে'}</p>
-              <h2 className="mt-4 text-3xl font-black text-slate-900 sm:text-4xl">{language === 'en' ? 'A modern healthcare destination rooted in trust.' : 'বিশ্বাসের ওপর ভিত্তি করে আধুনিক স্বাস্থ্যসেবা গন্তব্য।'}</h2>
-              <p className="mt-5 text-lg text-slate-600">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-teal-100 text-teal-800">
+                <Hospital className="w-3.5 h-3.5" />
+                <span>{language === 'en' ? 'About CarePulse Hospital' : 'কেয়ারপালস হাসপাতাল সম্পর্কে'}</span>
+              </div>
+              <h2 className="mt-4 text-3xl font-black text-slate-900 sm:text-4xl">
+                {language === 'en' ? 'A modern healthcare destination rooted in trust.' : 'বিশ্বাসের ওপর ভিত্তি করে আধুনিক স্বাস্থ্যসেবা গন্তব্য।'}
+              </h2>
+              <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
                 {language === 'en'
-                  ? 'CarePulse Hospital combines compassionate clinicians, advanced infrastructure, and efficient digital systems to provide safe, patient-first healthcare for every age and condition.'
-                  : 'কেয়ারপালস হাসপাতাল হৃদয়বান চিকিৎসক, আধুনিক অবকাঠামো ও দক্ষ ডিজিটাল সিস্টেম মিলিয়ে প্রতিটি বয়স ও শর্তের রোগীর জন্য নিরাপদ, রোগী-কেন্দ্রিক স্বাস্থ্যসেবা প্রদান করে।'}
+                  ? 'CarePulse Hospital combines compassionate clinicians, advanced infrastructure, and intelligent digital systems to provide safe, patient-first healthcare for every age and condition.'
+                  : 'কেয়ারপালস হাসপাতাল হৃদয়বান চিকিৎসক, আধুনিক অবকাঠামো ও দক্ষ ডিজিটাল সিস্টেম মিলিয়ে প্রতিটি বয়স ও শর্তের রোগীর জন্য নিরাপদ, রোগী-কেন্দ্রিক স্বাস্থ্যসেবা নিশ্চিত করে।'}
               </p>
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {(language === 'en'
-                  ? [['40+', 'Doctors'], ['8', 'Departments'], ['240', 'Beds'], ['24/7', 'Emergency']]
-                  : [['৪০+', 'ডাক্তার'], ['৮', 'বিভাগ'], ['২৪০', 'বেড'], ['২৪/৭', 'জরুরি সেবা']]
-                ).map(([value, label]) => <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-3"><p className="text-xl font-black text-teal-800">{value}</p><p className="mt-1 text-xs font-medium text-slate-600">{label}</p></div>)}
+                  ? [['45+', 'Doctors'], ['8', 'Centres'], ['240', 'Beds'], ['24/7', 'Emergency']]
+                  : [['৪৫+', 'ডাক্তার'], ['৮', 'সেন্টার'], ['২৪০', 'বেড'], ['২৪/৭', 'জরুরি সেবা']]
+                ).map(([value, label]) => (
+                  <div key={label} className="rounded-xl border border-slate-200 bg-white p-3.5 text-center shadow-2xs">
+                    <p className="text-xl font-black text-teal-700">{value}</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-600">{label}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               {aboutCards.map((item) => (
-                <div key={item.title} className="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-100 to-cyan-100 text-teal-700">
-                    <item.icon className="h-5 w-5" />
+                <div key={item.title} className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm hover:shadow-md transition">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 border border-teal-100">
+                    <item.icon className="h-6 w-6 stroke-[2]" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p>
+                  <h3 className="text-lg font-bold text-slate-900">{item.title}</h3>
+                  <p className="mt-2 text-xs sm:text-sm leading-6 text-slate-600">{item.text}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="departments" className="bg-slate-50 py-16">
+        {/* 5. SPECIALIZED DEPARTMENTS SHOWCASE */}
+        <section id="departments" className="bg-slate-100/70 py-16 border-y border-slate-200/80">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mb-10 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">{language === 'en' ? 'Departments' : 'বিভাগ'}</p>
-                <h2 className="mt-3 text-3xl font-black text-slate-900">{language === 'en' ? 'Focused care across major medical disciplines' : 'প্রধান চিকিৎসা শাখায় বিশেষায়িত যত্ন'}</h2>
-              </div>
+            <div className="mb-10 text-center max-w-2xl mx-auto">
+              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-teal-100 text-teal-800">
+                {language === 'en' ? 'Clinical Excellence' : 'চিকিৎসা উৎকর্ষ'}
+              </span>
+              <h2 className="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">
+                {language === 'en' ? 'Focused Care Across Major Disciplines' : 'বিশেষায়িত চিকিৎসা কেন্দ্রসমূহ'}
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                {language === 'en' ? 'Equipped with precision medical tech and board-certified specialists.' : 'সর্বাধুনিক প্রযুক্তি এবং বোর্ড-প্রত্যয়িত বিশেষজ্ঞদের দ্বারা পরিচালিত।'}
+              </p>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {departmentData.map(({ name, nameBn, icon: Icon, description, descriptionBn }) => (
-                <div key={name} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-100 to-teal-100 text-teal-700">
-                    <Icon className="h-5 w-5" />
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {DEPARTMENTS_DATA.map((dept) => (
+                <div
+                  key={dept.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:-translate-y-1 hover:shadow-lg hover:border-teal-400 transition-all group"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-cyan-100 text-teal-700 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+                      <HeartPulse className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      {dept.totalDoctors} {language === 'bn' ? 'চিকিৎসক' : 'Doctors'}
+                    </span>
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900">{language === 'en' ? name : nameBn}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">{language === 'en' ? description : descriptionBn}</p>
+
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    {language === 'bn' ? dept.nameBn : dept.name}
+                  </h3>
+                  <p className="mt-2 text-xs text-slate-500 leading-relaxed line-clamp-3">
+                    {language === 'bn' ? dept.descriptionBn : dept.description}
+                  </p>
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-teal-700">
+                    <span>{dept.headDoctor}</span>
+                    <button
+                      onClick={() => {
+                        setSelectedDoctorId(undefined);
+                        setIsBookingModalOpen(true);
+                      }}
+                      className="text-slate-400 hover:text-teal-700 transition"
+                      title="অ্যাপয়েন্টমেন্ট বুক করুন"
+                    >
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
+        {/* 6. DOCTORS DIRECTORY WITH REAL-TIME BOOKING */}
         <section id="doctors" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mb-10">
-            <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">{language === 'en' ? 'Doctors' : 'ডাক্তার'}</p>
-            <h2 className="mt-3 text-3xl font-black text-slate-900">{language === 'en' ? 'Meet the specialists behind every recovery' : 'প্রতিটি সুস্থতার পেছনে থাকা বিশেষজ্ঞদের সাক্ষাৎ'}</h2>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-teal-100 text-teal-800">
+                {language === 'en' ? 'Our Specialists' : 'বিশেষজ্ঞ চিকিৎসকবৃন্দ'}
+              </span>
+              <h2 className="mt-3 text-3xl font-black text-slate-900">
+                {language === 'en' ? 'Book Direct Consultations' : 'অনলাইন ডাক্তারের সিরিয়াল বুকিং'}
+              </h2>
+            </div>
+
+            {/* Department Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+              <button
+                onClick={() => setActiveDoctorDept('all')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${
+                  activeDoctorDept === 'all'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {language === 'en' ? 'All Specialists' : 'সকল বিশেষজ্ঞ'}
+              </button>
+              {DEPARTMENTS_DATA.slice(0, 4).map((dept) => (
+                <button
+                  key={dept.id}
+                  onClick={() => setActiveDoctorDept(dept.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${
+                    activeDoctorDept === dept.id
+                      ? 'bg-teal-700 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {language === 'en' ? dept.name.split(' ')[0] : dept.nameBn.split(' ')[0]}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {doctorData.map((doctor) => (
-              <div key={doctor.name} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-                <img src={doctor.image} alt={doctor.name} className="h-64 w-full object-cover" />
-                <div className="p-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">{doctor.specialty}</p>
-                  <h3 className="mt-2 text-xl font-black text-slate-900">{doctor.name}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{doctor.experience} {language === 'en' ? 'of clinical experience' : 'ক্লিনিক্যাল অভিজ্ঞতা'}</p>
-                  <p className="mt-1 text-xs font-semibold text-emerald-700">{language === 'en' ? 'Available today' : 'আজ চেম্বার করবেন'}</p>
-                  <div className="mt-4 flex gap-2">
-                    <a href="#contact" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-bold text-slate-700 hover:border-teal-600 hover:text-teal-700">{language === 'en' ? 'View Profile' : 'প্রোফাইল'}</a>
-                    <Link to="/login" className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-center text-xs font-bold text-white hover:bg-teal-800">{language === 'en' ? 'Book Appointment' : 'অ্যাপয়েন্টমেন্ট'}</Link>
+            {filteredDoctors.map((doctor) => (
+              <div
+                key={doctor.id}
+                className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs hover:-translate-y-1.5 hover:shadow-xl transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative h-56 w-full bg-slate-100">
+                    <img
+                      src={doctor.avatarUrl}
+                      alt={doctor.name}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-full text-[11px] font-extrabold text-amber-500 shadow-xs flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 stroke-amber-400" />
+                      <span>{doctor.rating}</span>
+                    </div>
+                    {doctor.isAvailableToday && (
+                      <div className="absolute bottom-3 left-3 bg-emerald-600/90 text-white px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs">
+                        {language === 'bn' ? 'আজ উপস্থিত' : 'Available Today'}
+                      </div>
+                    )}
                   </div>
+
+                  <div className="p-5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-teal-700">
+                      {language === 'bn' ? doctor.specialtyBn : doctor.specialty}
+                    </p>
+                    <h3 className="mt-1 text-base font-bold text-slate-900 leading-snug">
+                      {language === 'bn' ? doctor.nameBn : doctor.name}
+                    </h3>
+                    <p className="mt-1 text-[11px] text-slate-500 line-clamp-1">{doctor.degrees}</p>
+                    <p className="mt-2 text-xs font-semibold text-slate-700">
+                      🕒 {doctor.visitingHours}
+                    </p>
+                    <p className="mt-1 text-xs font-mono font-bold text-blue-700">
+                      ৳ {doctor.consultFee.toLocaleString()} BDT
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-5 pt-0">
+                  <button
+                    onClick={() => {
+                      setSelectedDoctorId(doctor.id);
+                      setIsBookingModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 py-2.5 text-xs font-bold text-white shadow-sm hover:shadow-md transition cursor-pointer"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    <span>{language === 'en' ? 'Book Appointment' : 'সিরিয়াল বুক করুন'}</span>
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section id="services" className="bg-gradient-to-br from-slate-900 to-sky-950 py-16 text-white">
+        {/* 7. SERVICES SECTION */}
+        <section id="services" className="bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 py-16 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mb-10 text-center">
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-cyan-200">{language === 'en' ? 'Services' : 'সেবা'}</p>
-              <h2 className="mt-3 text-3xl font-black">{language === 'en' ? 'Integrated support from diagnosis to recovery' : 'রোগ নির্ণয় থেকে সুস্থতার জন্য একীভূত সহায়তা'}</h2>
+            <div className="mb-12 text-center max-w-2xl mx-auto">
+              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-cyan-900/60 text-cyan-300 border border-cyan-700/50">
+                {language === 'en' ? 'Healthcare Services' : 'হাসপাতাল পরিষেবা'}
+              </span>
+              <h2 className="mt-3 text-3xl font-black sm:text-4xl">
+                {language === 'en' ? 'Integrated Support From Diagnosis to Recovery' : 'রোগ নির্ণয় থেকে সুস্থতা পর্যন্ত একীভূত যত্ন'}
+              </h2>
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
               {serviceCards.map((service) => (
-                <div key={service.title} className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-200">
-                    <CheckCircle2 className="h-5 w-5" />
+                <div key={service.title} className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md hover:bg-white/10 transition">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-300">
+                    <CheckCircle2 className="h-6 w-6" />
                   </div>
-                  <h3 className="text-xl font-bold">{service.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">{service.text}</p>
+                  <h3 className="text-lg font-bold">{service.title}</h3>
+                  <p className="mt-2 text-xs sm:text-sm leading-6 text-slate-300">{service.text}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section id="facilities" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-2">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">{language === 'en' ? 'Facilities' : 'পরিকাঠামো'}</p>
-              <h2 className="mt-3 text-3xl font-black text-slate-900">{language === 'en' ? 'Designed for comfort, safety, and precision' : 'আরাম, নিরাপত্তা ও নির্ভুলতার জন্য ডিজাইন'}</h2>
-
-              <div className="mt-6 space-y-4">
-                {facilityItems.map((item) => (
-                  <div key={item} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle2 className="h-4 w-4" /></div>
-                    <span className="font-semibold text-slate-700">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-cyan-50 to-teal-50 p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {facilityStats.map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><Icon className="h-5 w-5" /></div>
-                    <p className="text-2xl font-black text-slate-900">{value}</p>
-                    <p className="mt-1 text-sm text-slate-600">{label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-slate-50 py-16">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mb-10">
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">{language === 'en' ? 'Testimonials' : 'রোগীর অভিজ্ঞতা'}</p>
-              <h2 className="mt-3 text-3xl font-black text-slate-900">{language === 'en' ? 'Patients trust CarePulse for life-changing care' : 'রোগীরা জীবন বদলানো সেবার জন্য কেয়ারপালসের উপর আস্থা রাখেন'}</h2>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-3">
-              {testimonials.map((item) => (
-                <div key={item.name} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="mb-4 flex items-center gap-1 text-amber-400">★★★★★</div>
-                  <p className="text-base leading-7 text-slate-700">“{item.quote}”</p>
-                  <div className="mt-6 border-t border-slate-200 pt-4">
-                    <p className="font-bold text-slate-900">{item.name}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
+        {/* 8. CONTACT & INQUIRY SECTION */}
         <section id="contact" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm lg:p-10">
-            <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr]">
+            <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] items-center">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-700">{language === 'en' ? 'Contact' : 'যোগাযোগ'}</p>
-                <h2 className="mt-3 text-3xl font-black text-slate-900">{language === 'en' ? 'Visit or connect with our care team' : 'আমাদের যত্ন টিমকে দেখে বা সংযুক্ত হন'}</h2>
-                <div className="mt-6 space-y-4 text-slate-600">
-                  <div className="flex items-center gap-3"><MapPin className="h-5 w-5 text-teal-700" /> 24 CarePulse Avenue, Dhaka 1212</div>
-                  <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-teal-700" /> +880 1712 345678</div>
-                  <div className="flex items-center gap-3"><Mail className="h-5 w-5 text-teal-700" /> hello@carepulse.bd</div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-teal-100 text-teal-800">
+                  {language === 'en' ? 'Connect With Us' : 'যোগাযোগ করুন'}
+                </span>
+                <h2 className="mt-3 text-3xl font-black text-slate-900">
+                  {language === 'en' ? 'Visit CarePulse Medical Center' : 'কেয়ারপালস মেডিকেল সেন্টারে যোগাযোগ'}
+                </h2>
+                <div className="mt-6 space-y-4 text-slate-600 text-sm">
+                  <div className="flex items-center gap-3"><MapPin className="h-5 w-5 text-teal-600 shrink-0" /> Plot 18, Road 7, Dhanmondi, Dhaka-1205</div>
+                  <div className="flex items-center gap-3"><Phone className="h-5 w-5 text-teal-600 shrink-0" /> Hotline: 16263 | Ambulance: +880 1711-999888</div>
+                  <div className="flex items-center gap-3"><Mail className="h-5 w-5 text-teal-600 shrink-0" /> help@carepulsehospital.org</div>
+                  <div className="flex items-center gap-3"><Clock className="h-5 w-5 text-teal-600 shrink-0" /> OPD: 08:00 AM - 10:00 PM | Emergency: 24/7</div>
                 </div>
               </div>
 
-              <div className="rounded-3xl bg-slate-50 p-6">
-                <h3 className="text-xl font-black text-slate-900">{language === 'en' ? 'Book a consultation' : 'কনসালটেশন বুক করুন'}</h3>
-                <div className="mt-5 space-y-4">
-                  <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none ring-0 transition focus:border-teal-500" placeholder={language === 'en' ? 'Full name' : 'পুরো নাম'} />
-                  <input className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500" placeholder={language === 'en' ? 'Email address' : 'ইমেইল ঠিকানা'} />
-                  <textarea className="min-h-[120px] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500" placeholder={language === 'en' ? 'Tell us how we can help' : 'আমরা কীভাবে সহায়তা করতে পারি তা লিখুন'} />
-                  <button className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-teal-600/20">{language === 'en' ? 'Send Enquiry' : 'অনুসন্ধা পাঠান'}</button>
+              <div className="rounded-3xl bg-slate-50 border border-slate-200 p-6 sm:p-8">
+                <h3 className="text-lg font-black text-slate-900">
+                  {language === 'en' ? 'Request Immediate Call Back' : 'জরুরি কল ব্যাক অনুরোধ'}
+                </h3>
+                <div className="mt-4 space-y-3.5">
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-teal-500 shadow-2xs"
+                    placeholder={language === 'en' ? 'Patient Name' : 'রোগীর নাম'}
+                  />
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-teal-500 shadow-2xs"
+                    placeholder={language === 'en' ? 'Contact Phone (e.g. 01712-345678)' : 'মোবাইল নম্বর'}
+                  />
+                  <textarea
+                    className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-teal-500 shadow-2xs"
+                    placeholder={language === 'en' ? 'Briefly describe condition or doctor preference' : 'সমস্যা বা পছন্দের ডাক্তারের নাম লিখুন'}
+                  />
+                  <button
+                    onClick={() => alert(language === 'bn' ? 'ধন্যবাদ! আমাদের প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবেন।' : 'Thank you! Our care representative will contact you shortly.')}
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 py-3 text-sm font-bold text-white shadow-md shadow-teal-600/20 hover:shadow-lg transition cursor-pointer"
+                  >
+                    {language === 'en' ? 'Send Request' : 'অনুরোধ পাঠান'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -809,19 +1059,61 @@ const PublicHomePage = ({ user, onLogout, language, onToggleLanguage }: { user: 
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-slate-900 text-slate-300">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+      {/* 9. FOOTER */}
+      <footer className="border-t border-slate-200 bg-slate-950 text-slate-400 py-10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
-            <p className="text-xl font-black text-white">CarePulse Hospital</p>
-            <p className="mt-2 text-sm text-slate-400">{language === 'en' ? 'Modern healthcare for a healthier community.' : 'সুস্থ সমাজের জন্য আধুনিক স্বাস্থ্যসেবা।'}</p>
+            <div className="flex items-center gap-2">
+              <HeartPulse className="w-5 h-5 text-teal-400" />
+              <p className="text-lg font-black text-white">CarePulse Hospital Information System</p>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {language === 'en' ? 'Govt. DGHS Reg: DGHS-REG-2024-8971 | 24/7 Precision Digital Care' : 'সরকারি রেজি: DGHS-REG-2024-8971 | ২৪/৭ ডিজিটাল স্বাস্থ্যসেবা'}
+            </p>
           </div>
-          <div className="flex items-center gap-6 text-sm text-slate-300">
-            <a href="#about" className="transition hover:text-white">{language === 'en' ? 'About' : 'সম্পর্কে'}</a>
-            <a href="#departments" className="transition hover:text-white">{language === 'en' ? 'Departments' : 'বিভাগ'}</a>
-            <a href="#contact" className="transition hover:text-white">{language === 'en' ? 'Contact' : 'যোগাযোগ'}</a>
+          <div className="flex items-center gap-6 text-xs font-semibold text-slate-400">
+            <a href="#about" className="hover:text-white transition">{language === 'en' ? 'About' : 'সম্পর্কে'}</a>
+            <a href="#departments" className="hover:text-white transition">{language === 'en' ? 'Departments' : 'বিভাগ'}</a>
+            <a href="#doctors" className="hover:text-white transition">{language === 'en' ? 'Doctors' : 'ডাক্তার'}</a>
+            <a href="#contact" className="hover:text-white transition">{language === 'en' ? 'Contact' : 'যোগাযোগ'}</a>
           </div>
         </div>
       </footer>
+
+      {/* 10. FLOATING AI MEDICAL CHATBOT (CarePulse AI) */}
+      <AiChatbot
+        language={language}
+        doctors={DOCTORS_DATA}
+        onOpenBookingModal={(docId) => {
+          setSelectedDoctorId(docId);
+          setIsBookingModalOpen(true);
+        }}
+      />
+
+      {/* 11. INTERACTIVE APPOINTMENT MODAL */}
+      <AppointmentModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        doctors={DOCTORS_DATA}
+        initialDoctorId={selectedDoctorId}
+        onBookAppointment={(newApt) => {
+          console.log('Booked Appointment:', newApt);
+        }}
+        language={language}
+        hospitalSettings={DEFAULT_HOSPITAL_SETTINGS}
+      />
+
+      {/* 12. INTERACTIVE AI SYMPTOM TRIAGE MODAL */}
+      <SymptomCheckerModal
+        isOpen={isSymptomModalOpen}
+        onClose={() => setIsSymptomModalOpen(false)}
+        departments={DEPARTMENTS_DATA}
+        onSelectDepartmentForBooking={() => {
+          setIsSymptomModalOpen(false);
+          setIsBookingModalOpen(true);
+        }}
+        language={language}
+      />
     </div>
   );
 };
@@ -936,86 +1228,124 @@ const LoginPage = ({ onLogin, user, language, onToggleLanguage }: { onLogin: (ro
           <p className="mt-4 text-lg text-slate-600">{locale.login.subheader}</p>
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+        <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {loginOptions.map(({ role, title, icon: Icon, description, features, action }) => (
-            <div key={role} className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-100 to-teal-100 text-teal-700">
-                <Icon className="h-7 w-7" />
+            <div
+              key={role}
+              className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs hover:-translate-y-1.5 hover:shadow-xl hover:border-teal-400 transition-all flex flex-col justify-between group"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-50 to-cyan-100 text-teal-700 group-hover:scale-105 group-hover:bg-teal-600 group-hover:text-white transition-all shadow-xs">
+                    <Icon className="h-6 w-6 stroke-[2]" />
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    {role}
+                  </span>
+                </div>
+
+                <h2 className="text-xl font-black text-slate-900 group-hover:text-teal-700 transition-colors">{title}</h2>
+                <p className="mt-2 text-xs leading-5 text-slate-500 line-clamp-2">{description}</p>
+
+                <ul className="mt-4 space-y-2 text-xs text-slate-700 pt-3 border-t border-slate-100">
+                  {features.slice(0, 3).map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-600" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <h2 className="mt-5 text-2xl font-black text-slate-900">{title}</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
 
-              <ul className="mt-5 space-y-3 text-sm text-slate-700">
-                {features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-6 pt-3 border-t border-slate-100">
+                {role === 'admin' && adminLoginOpen ? (
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (adminEmail.trim().toLowerCase() !== 'admin@carepulse.bd' || adminPassword !== 'Admin@123') {
+                        setAdminLoginError(locale.login.adminInvalid);
+                        return;
+                      }
+                      setAdminLoginError('');
+                      onLogin('admin');
+                      navigate('/admin/dashboard');
+                    }}
+                  >
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1" htmlFor="admin-email">{locale.login.adminEmail}</label>
+                      <input
+                        id="admin-email"
+                        type="email"
+                        autoComplete="username"
+                        required
+                        value={adminEmail}
+                        onChange={(event) => setAdminEmail(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs outline-none transition focus:border-teal-500"
+                        placeholder="admin@carepulse.bd"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1" htmlFor="admin-password">{locale.login.adminPassword}</label>
+                      <input
+                        id="admin-password"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        value={adminPassword}
+                        onChange={(event) => setAdminPassword(event.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs outline-none transition focus:border-teal-500"
+                        placeholder="••••••••"
+                      />
+                    </div>
 
-              {role === 'admin' && adminLoginOpen ? (
-                <form
-                  className="mt-6 space-y-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (adminEmail.trim().toLowerCase() !== 'admin@carepulse.bd' || adminPassword !== 'Admin@123') {
-                      setAdminLoginError(locale.login.adminInvalid);
-                      return;
-                    }
-                    setAdminLoginError('');
-                    onLogin('admin');
-                    navigate('/admin/dashboard');
-                  }}
-                >
-                  <label className="block text-sm font-semibold text-slate-700" htmlFor="admin-email">{locale.login.adminEmail}</label>
-                  <input
-                    id="admin-email"
-                    type="email"
-                    autoComplete="username"
-                    required
-                    value={adminEmail}
-                    onChange={(event) => setAdminEmail(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-teal-500"
-                    placeholder="admin@carepulse.bd"
-                  />
-                  <label className="block text-sm font-semibold text-slate-700" htmlFor="admin-password">{locale.login.adminPassword}</label>
-                  <input
-                    id="admin-password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={adminPassword}
-                    onChange={(event) => setAdminPassword(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-teal-500"
-                    placeholder="••••••••"
-                  />
-                  <p className="text-xs text-slate-500">{locale.login.adminDemo}</p>
-                  {adminLoginError && <p role="alert" className="text-sm font-semibold text-rose-600">{adminLoginError}</p>}
-                  <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-teal-600/20 transition hover:translate-y-[-1px]">
-                    {locale.login.adminSubmit}
+                    <div className="flex items-center justify-between text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdminEmail('admin@carepulse.bd');
+                          setAdminPassword('Admin@123');
+                        }}
+                        className="text-teal-700 hover:underline font-bold"
+                      >
+                        ⚡ Auto-fill Demo
+                      </button>
+                    </div>
+
+                    {adminLoginError && <p role="alert" className="text-xs font-semibold text-rose-600">{adminLoginError}</p>}
+
+                    <button
+                      type="submit"
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-600/20 hover:shadow-lg transition cursor-pointer"
+                    >
+                      <span>{locale.login.adminSubmit}</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setAdminLoginOpen(false); setAdminLoginError(''); }}
+                      className="w-full py-1 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                    >
+                      {locale.login.adminCancel}
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (role === 'admin') {
+                        setAdminLoginOpen(true);
+                        return;
+                      }
+                      onLogin(role);
+                      navigate(`/${role}/dashboard`);
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 py-2.5 text-xs font-bold text-white shadow-sm hover:shadow-md hover:scale-[1.01] transition cursor-pointer"
+                  >
+                    <span>{action}</span>
                     <ChevronRight className="h-4 w-4" />
                   </button>
-                  <button type="button" onClick={() => { setAdminLoginOpen(false); setAdminLoginError(''); }} className="w-full py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
-                    {locale.login.adminCancel}
-                  </button>
-                </form>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (role === 'admin') {
-                      setAdminLoginOpen(true);
-                      return;
-                    }
-                    onLogin(role);
-                    navigate(`/${role}/dashboard`);
-                  }}
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-teal-600/20 transition hover:translate-y-[-1px]"
-                >
-                  {action}
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -1394,7 +1724,7 @@ const AdminDashboard = ({ user, onLogout, language, onToggleLanguage }: { user: 
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AppShell />
     </BrowserRouter>
   );

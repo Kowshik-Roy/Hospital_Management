@@ -6,9 +6,13 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build",
-    "start": "tsx server.ts",
+    "dev": "concurrently -k -n \"LARAVEL,VITE\" -c \"cyan,magenta\" \"php artisan serve --port=8000\" \"vite\"",
+    "build": "vite build && node -e \"const fs=require('fs'); if(fs.existsSync('dist/index.html')){ fs.copyFileSync('dist/index.html', 'dist/404.html'); }\"",
+    "serve": "php artisan serve --port=8000",
+    "start": "php artisan serve --port=8000",
+    "dev:vite": "vite",
+    "dev:laravel": "php artisan serve --port=8000",
+    "server:node": "tsx server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
@@ -36,6 +40,9 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
+    "axios": "^1.21.0",
+    "concurrently": "^10.0.7",
+    "laravel-vite-plugin": "^3.2.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
